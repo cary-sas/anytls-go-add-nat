@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Deprecated: use InboundListener instead for new code
 func handleTcpConnection(ctx context.Context, c net.Conn, s *myClient) {
 	defer func() {
 		if r := recover(); r != nil {
