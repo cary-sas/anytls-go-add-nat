@@ -23,6 +23,7 @@ func main() {
 	sni := flag.String("sni", "", "Server Name Indication")
 	password := flag.String("p", "", "Password")
 	minIdleSession := flag.Int("m", 5, "Reserved min idle session")
+	listenAddr := flag.String("l", "", "SOCKS5 listen address, compatibility alias for -socks")
 
 	// New parameters for dual-mode support
 	socksAddr := flag.String("socks", "", "SOCKS5 listen address (e.g., 127.0.0.1:1080)")
@@ -51,6 +52,10 @@ func main() {
 
 	if _, _, err := net.SplitHostPort(*serverAddr); err != nil {
 		logrus.Fatalln("error server address:", *serverAddr, err)
+	}
+
+	if *socksAddr == "" && *listenAddr != "" {
+		*socksAddr = *listenAddr
 	}
 
 	logLevel, err := logrus.ParseLevel(os.Getenv("LOG_LEVEL"))

@@ -1,6 +1,10 @@
 /dist
+/.gocache
+/.gopath
+/.gomodcache
 /cmd/client/client
 /cmd/server/server
 *.exe
+*.test
 *.zip
 .vscode

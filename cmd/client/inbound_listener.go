@@ -94,17 +94,15 @@ func (il *InboundListener) handleSOCKS5(ctx context.Context, conn net.Conn) {
 
 // NAT handling logic (transparent forwarding, no protocol negotiation)
 func (il *InboundListener) handleNAT(ctx context.Context, conn net.Conn) {
-	localAddr := conn.LocalAddr().(*net.TCPAddr)
 	remoteAddr := conn.RemoteAddr().(*net.TCPAddr)
 
-	// In NAT mode, the connection destination is the LocalAddr
-	destination := M.Socksaddr{
-		Fqdn: "",
-		IP:   localAddr.IP,
-		Port: uint16(localAddr.Port),
+	destination, err := originalDestination(conn)
+	if err != nil {
+		logrus.Errorln("[NAT] get original destination error:", err)
+		return
 	}
 
-	logrus.Debugf("[NAT] %s -> %s:%d", remoteAddr.String(), destination.IP, destination.Port)
+	logrus.Debugf("[NAT] %s -> %s", remoteAddr.String(), destination.String())
 
 	// Create proxy connection
 	proxyConn, err := il.client.CreateProxy(ctx, destination)
