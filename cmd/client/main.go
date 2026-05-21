@@ -18,11 +18,16 @@ import (
 var passwordSha256 []byte
 
 func main() {
-	listen := flag.String("l", "127.0.0.1:1080", "socks5 listen port")
+	// Original parameters
 	serverAddr := flag.String("s", "", "Server address or anytls:// link")
 	sni := flag.String("sni", "", "Server Name Indication")
 	password := flag.String("p", "", "Password")
 	minIdleSession := flag.Int("m", 5, "Reserved min idle session")
+
+	// New parameters for dual-mode support
+	socksAddr := flag.String("socks", "", "SOCKS5 listen address (e.g., 127.0.0.1:1080)")
+	natAddr := flag.String("nat", "", "NAT listen address (e.g., 0.0.0.0:3333)")
+
 	flag.Parse()
 
 	if serverURL, err := url.Parse(*serverAddr); err == nil {
@@ -37,7 +42,7 @@ func main() {
 	}
 
 	if *serverAddr == "" {
-		logrus.Fatalln("please set -s server adreess")
+		logrus.Fatalln("please set -s server address")
 	}
 
 	if *password == "" {
@@ -58,12 +63,6 @@ func main() {
 	passwordSha256 = sum[:]
 
 	logrus.Infoln("[Client]", util.ProgramVersionName)
-	logrus.Infoln("[Client] socks5/http", *listen, "=>", *serverAddr)
-
-	listener, err := net.Listen("tcp", *listen)
-	if err != nil {
-		logrus.Fatalln("listen socks5 tcp:", err)
-	}
 
 	// You can only use `InsecureSkipVerify` by default in the sample client; it is not recommended for use in production code.
 	tlsConfig := &tls.Config{
@@ -84,6 +83,8 @@ func main() {
 	}
 
 	ctx := context.Background()
+
+	// Create anytls client
 	client := NewMyClient(ctx, func(ctx context.Context) (net.Conn, error) {
 		conn, err := proxy.SystemDialer.DialContext(ctx, "tcp", *serverAddr)
 		if err != nil {
@@ -93,11 +94,32 @@ func main() {
 		return conn, nil
 	}, *minIdleSession)
 
-	for {
-		c, err := listener.Accept()
-		if err != nil {
-			logrus.Fatalln("accept:", err)
-		}
-		go handleTcpConnection(ctx, c, client)
+	// Create inbound listeners
+	var inbounds []*InboundListener
+
+	// SOCKS5 inbound
+	if *socksAddr != "" {
+		logrus.Infoln("[SOCKS5] Listening on", *socksAddr)
+		socksListener := NewInboundListener(*socksAddr, "socks5", client)
+		inbounds = append(inbounds, socksListener)
+		go socksListener.Start(ctx)
 	}
+
+	// NAT inbound
+	if *natAddr != "" {
+		logrus.Infoln("[NAT] Listening on", *natAddr)
+		natListener := NewInboundListener(*natAddr, "nat", client)
+		inbounds = append(inbounds, natListener)
+		go natListener.Start(ctx)
+	}
+
+	if len(inbounds) == 0 {
+		logrus.Fatalln("please set at least -socks or -nat")
+	}
+
+	logrus.Infoln("[Client] Server:", *serverAddr)
+	logrus.Infoln("[Client] Started successfully!")
+
+	// Keep running
+	select {}
 }
