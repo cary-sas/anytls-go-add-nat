@@ -38,12 +38,7 @@ jobs:
           linux|amd64|||
           linux|arm64|||
           linux|arm|5|v5|
-          linux|arm|6|v6|
           linux|arm|7|v7|
-          linux|mips|softfloat|-softfloat|
-          linux|mipsle|softfloat|-softfloat|
-          linux|mips64le|||
-          linux|riscv64|||
           darwin|amd64|||
           darwin|arm64|||
           freebsd|amd64|||
@@ -59,9 +54,12 @@ jobs:
               ext=".exe"
             fi
 
-            name="anytls-${version}-${goos}-${goarch}${suffix}"
-            package_dir="dist/${name}"
-            mkdir -p "${package_dir}"
+            platform="${goos}-${goarch}${suffix}"
+            client_name="anytls-client-${version}-${platform}"
+            server_name="anytls-server-${version}-${platform}"
+            client_dir="dist/${client_name}"
+            server_dir="dist/${server_name}"
+            mkdir -p "${client_dir}" "${server_dir}"
 
             unset GOARM GOMIPS
             export CGO_ENABLED=0
@@ -70,21 +68,21 @@ jobs:
             if [[ "${goarch}" == "arm" && -n "${variant}" ]]; then
               export GOARM="${variant}"
             fi
-            if [[ "${goarch}" == "mips" || "${goarch}" == "mipsle" ]]; then
-              export GOMIPS="${variant}"
-            fi
+            echo "Building ${client_name}"
+            go build -trimpath -ldflags="-s -w" -o "${client_dir}/anytls-client${ext}" ./cmd/client
+            echo "Building ${server_name}"
+            go build -trimpath -ldflags="-s -w" -o "${server_dir}/anytls-server${ext}" ./cmd/server
 
-            echo "Building ${name}"
-            go build -trimpath -ldflags="-s -w" -o "${package_dir}/anytls-client${ext}" ./cmd/client
-            go build -trimpath -ldflags="-s -w" -o "${package_dir}/anytls-server${ext}" ./cmd/server
-
-            cp readme.md "${package_dir}/"
+            cp readme.md "${client_dir}/"
+            cp readme.md "${server_dir}/"
             if [[ "${goos}" == "windows" ]]; then
-              (cd dist && zip -qr "${name}.zip" "${name}")
+              (cd dist && zip -qr "${client_name}.zip" "${client_name}")
+              (cd dist && zip -qr "${server_name}.zip" "${server_name}")
             else
-              tar -C dist -czf "dist/${name}.tar.gz" "${name}"
+              tar -C dist -czf "dist/${client_name}.tar.gz" "${client_name}"
+              tar -C dist -czf "dist/${server_name}.tar.gz" "${server_name}"
             fi
-            rm -rf "${package_dir}"
+            rm -rf "${client_dir}" "${server_dir}"
           done <<< "${targets}"
 
           (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
