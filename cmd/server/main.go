@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -21,7 +22,14 @@ func main() {
 	listen := flag.String("l", "0.0.0.0:8443", "server listen port")
 	password := flag.String("p", "", "password")
 	paddingScheme := flag.String("padding-scheme", "", "padding-scheme")
+	version := flag.Bool("v", false, "Print version and exit")
+	flag.BoolVar(version, "version", false, "Print version and exit")
 	flag.Parse()
+
+	if *version {
+		fmt.Println(util.ProgramVersionName)
+		return
+	}
 
 	if *password == "" {
 		logrus.Fatalln("please set password")

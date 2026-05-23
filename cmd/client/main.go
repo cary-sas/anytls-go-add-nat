@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -24,12 +25,19 @@ func main() {
 	password := flag.String("p", "", "Password")
 	minIdleSession := flag.Int("m", 5, "Reserved min idle session")
 	listenAddr := flag.String("l", "", "SOCKS5 listen address, compatibility alias for -socks")
+	version := flag.Bool("v", false, "Print version and exit")
+	flag.BoolVar(version, "version", false, "Print version and exit")
 
 	// New parameters for dual-mode support
 	socksAddr := flag.String("socks", "", "SOCKS5 listen address (e.g., 127.0.0.1:1080)")
 	natAddr := flag.String("nat", "", "NAT listen address (e.g., 0.0.0.0:3333)")
 
 	flag.Parse()
+
+	if *version {
+		fmt.Println(util.ProgramVersionName)
+		return
+	}
 
 	if serverURL, err := url.Parse(*serverAddr); err == nil {
 		if serverURL.Scheme == "anytls" {
