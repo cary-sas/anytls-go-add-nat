@@ -57,9 +57,10 @@ jobs:
             platform="${goos}-${goarch}${suffix}"
             client_name="anytls-client-${version}-${platform}"
             server_name="anytls-server-${version}-${platform}"
-            client_dir="dist/${client_name}"
-            server_dir="dist/${server_name}"
-            mkdir -p "${client_dir}" "${server_dir}"
+            client_binary="anytls-client${ext}"
+            server_binary="anytls-server${ext}"
+            client_path="dist/${client_binary}"
+            server_path="dist/${server_binary}"
 
             unset GOARM GOMIPS
             export CGO_ENABLED=0
@@ -69,20 +70,18 @@ jobs:
               export GOARM="${variant}"
             fi
             echo "Building ${client_name}"
-            go build -trimpath -ldflags="-s -w" -o "${client_dir}/anytls-client${ext}" ./cmd/client
+            go build -trimpath -ldflags="-s -w" -o "${client_path}" ./cmd/client
             echo "Building ${server_name}"
-            go build -trimpath -ldflags="-s -w" -o "${server_dir}/anytls-server${ext}" ./cmd/server
+            go build -trimpath -ldflags="-s -w" -o "${server_path}" ./cmd/server
 
-            cp readme.md "${client_dir}/"
-            cp readme.md "${server_dir}/"
             if [[ "${goos}" == "windows" ]]; then
-              (cd dist && zip -qr "${client_name}.zip" "${client_name}")
-              (cd dist && zip -qr "${server_name}.zip" "${server_name}")
+              (cd dist && zip -q "${client_name}.zip" "${client_binary}")
+              (cd dist && zip -q "${server_name}.zip" "${server_binary}")
             else
-              tar -C dist -czf "dist/${client_name}.tar.gz" "${client_name}"
-              tar -C dist -czf "dist/${server_name}.tar.gz" "${server_name}"
+              tar -C dist -czf "dist/${client_name}.tar.gz" "${client_binary}"
+              tar -C dist -czf "dist/${server_name}.tar.gz" "${server_binary}"
             fi
-            rm -rf "${client_dir}" "${server_dir}"
+            rm -f "${client_path}" "${server_path}"
           done <<< "${targets}"
 
           (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
